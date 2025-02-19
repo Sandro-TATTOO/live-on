@@ -94,8 +94,19 @@
 
 
     <script>
+        let nickname = '';
+        while (!nickname || nickname.trim() === '') {
+            nickname = prompt('Por favor, insira um apelido para participar do chat:');
+        }
+        
         const video = document.getElementById('webcam');
         const ws = new WebSocket('ws://' + window.location.host);
+        
+        ws.onopen = () => {
+            ws.send(JSON.stringify({ type: 'nickname', content: nickname }));
+            console.log('Conectado ao servidor WebSocket');
+        };
+
         
         // Chat elements
         const chatMessages = document.getElementById('chat-messages');
@@ -106,10 +117,15 @@
         sendButton.addEventListener('click', () => {
             const message = messageInput.value.trim();
             if (message) {
-                ws.send(JSON.stringify({ type: 'message', content: message }));
+                ws.send(JSON.stringify({ 
+                    type: 'message', 
+                    content: message,
+                    nickname: nickname 
+                }));
                 messageInput.value = '';
             }
         });
+
         
         // Handle incoming messages
         ws.onmessage = (event) => {
@@ -120,12 +136,13 @@
             
             try {
                 const data = JSON.parse(event.data);
-                if (data.type === 'message') {
-                    const messageElement = document.createElement('div');
-                    messageElement.textContent = data.content;
-                    chatMessages.appendChild(messageElement);
-                    chatMessages.scrollTop = chatMessages.scrollHeight;
-                }
+                    if (data.type === 'message') {
+                        const messageElement = document.createElement('div');
+                        messageElement.textContent = `${data.nickname}: ${data.content}`;
+                        chatMessages.appendChild(messageElement);
+                        chatMessages.scrollTop = chatMessages.scrollHeight;
+                    }
+
             } catch (error) {
                 console.error('Erro ao processar mensagem:', error);
             }

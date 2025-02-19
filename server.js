@@ -17,21 +17,30 @@ app.use(express.static(path.join(__dirname, 'public')));
 wss.on('connection', (ws) => {
     console.log('Novo cliente conectado');
 
+    // Armazenar apelido do usuário
+    let nickname = 'Anônimo';
+    
     ws.on('message', (message) => {
         try {
             const data = JSON.parse(message);
             
-            if (data.type === 'message') {
+            if (data.type === 'nickname') {
+                // Atualizar apelido do usuário
+                nickname = data.content;
+            } else if (data.type === 'message') {
                 // Transmitir mensagem de chat para todos os clientes
                 wss.clients.forEach((client) => {
                     if (client.readyState === WebSocket.OPEN) {
                         client.send(JSON.stringify({
                             type: 'message',
                             content: data.content,
+                            nickname: data.nickname || nickname,
                             timestamp: new Date().toISOString()
                         }));
+
                     }
                 });
+
             } else {
                 // Transmitir o frame de vídeo para outros clientes
                 wss.clients.forEach((client) => {
