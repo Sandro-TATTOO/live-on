@@ -1,25 +1,67 @@
 <!DOCTYPE html>
-<html lang="pt-BR">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Cliente de Transmissão de Vídeo</title>
+    <title>Client</title>
+    <style>
+        video {
+            width: 640px;
+            height: 480px;
+            border: 1px solid #ccc;
+        }
+    </style>
 </head>
 <body>
-    <h1>Cliente de Transmissão de Vídeo</h1>
-    <video id="video" autoplay></video>
+    <h1>Client</h1>
+    <video id="webcam" autoplay></video>
 
-    <script src="/socket.io/socket.io.js"></script>
     <script>
-        const video = document.getElementById('video');
-        const socket = io();
+        const video = document.getElementById('webcam');
+        const ws = new WebSocket('ws://' + window.location.host);
 
-        socket.on('video-stream', (data) => {
-            const blob = new Blob([data], { type: 'video/webm' });
-            const url = URL.createObjectURL(blob);
-            video.src = url;
-            video.play(); // Tenta reproduzir o vídeo
-        });
+
+        // Acessar a webcam
+        navigator.mediaDevices.getUserMedia({ video: true })
+            .then(stream => {
+                video.srcObject = stream;
+                startSendingFrames();
+            })
+            .catch(error => {
+                console.error('Erro ao acessar a webcam:', error);
+            });
+
+        function startSendingFrames() {
+            const canvas = document.createElement('canvas');
+            canvas.width = 640;
+            canvas.height = 480;
+            const ctx = canvas.getContext('2d');
+
+            setInterval(() => {
+                // Capturar frame do vídeo
+                ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+                canvas.toBlob((blob) => {
+                    const reader = new FileReader();
+                    reader.onload = () => {
+                        if (ws.readyState === WebSocket.OPEN) {
+                            ws.send(blob);
+                        }
+                    };
+                    reader.readAsDataURL(blob);
+                }, 'image/jpeg', 0.8);
+
+
+
+            }, 100); // Envia frames a cada 100ms
+        }
+
+        ws.onopen = () => {
+            console.log('Conectado ao servidor WebSocket');
+        };
+
+        ws.onerror = (error) => {
+            console.error('Erro na conexão WebSocket:', error);
+        };
     </script>
 </body>
 </html>

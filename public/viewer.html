@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Viewer</title>
+    <link rel="icon" href="data:,"> <!-- Prevent favicon requests -->
+    <style>
+        img {
+            width: 640px;
+            height: 480px;
+            border: 1px solid #ccc;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>Viewer</h1>
+    <img id="video-frame" src="" alt="Live Video Stream">
+
+    <script>
+        const ws = new WebSocket('ws://' + window.location.host);
+
+        const videoFrame = document.getElementById('video-frame');
+
+        ws.onmessage = (event) => {
+            console.log('Frame recebido:', event.data);
+            // Atualizar a imagem com o novo frame recebido
+            if (event.data instanceof Blob) {
+                const url = URL.createObjectURL(event.data);
+                console.log('Blob convertido para URL:', url);
+                videoFrame.onload = () => URL.revokeObjectURL(url); // Liberar memória
+                videoFrame.src = url;
+            } else if (typeof event.data === 'string' && event.data.startsWith('data:')) {
+                console.log('Data URL recebida');
+                videoFrame.src = event.data;
+            } else {
+                console.error('Formato de frame desconhecido:', typeof event.data);
+            }
+        };
+
+
+
+
+        ws.onopen = () => {
+            console.log('Conectado ao servidor WebSocket');
+        };
+
+        ws.onerror = (error) => {
+            console.error('Erro na conexão WebSocket:', error);
+            alert('Erro na conexão com o servidor. Tente recarregar a página.');
+        };
+
+        ws.onclose = () => {
+            console.log('Conexão WebSocket fechada');
+            alert('Conexão com o servidor perdida. Tente recarregar a página.');
+        };
+
+    </script>
+</body>
+</html>

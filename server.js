@@ -1,26 +1,41 @@
 const express = require('express');
 const http = require('http');
-const socketIo = require('socket.io');
+const WebSocket = require('ws');
+const path = require('path');
 
 const app = express();
 const server = http.createServer(app);
-const io = socketIo(server);
+const wss = new WebSocket.Server({ server });
 
-app.use(express.static('public'));
+// Configurações do servidor
+const PORT = 3000;
 
-io.on('connection', (socket) => {
+// Servir arquivos estáticos
+app.use(express.static(path.join(__dirname, 'public')));
+
+// WebSocket connection handler
+wss.on('connection', (ws) => {
     console.log('Novo cliente conectado');
 
-    socket.on('video-stream', (data) => {
-        socket.broadcast.emit('video-stream', data);
+    ws.on('message', (message) => {
+        // Transmitir o frame para todos os clientes conectados
+        wss.clients.forEach((client) => {
+            if (client !== ws && client.readyState === WebSocket.OPEN) {
+                client.send(message);
+            }
+        });
     });
 
-    socket.on('disconnect', () => {
+    ws.on('error', (error) => {
+        console.error('Erro na conexão WebSocket:', error);
+    });
+
+    ws.on('close', () => {
         console.log('Cliente desconectado');
     });
 });
 
-server.listen(3001, () => {
-    console.log('Servidor rodando na porta 3001');
-
+server.listen(PORT, () => {
+    console.log(`Servidor rodando na porta ${PORT}`);
+    console.log(`Acesse http://localhost:${PORT} para testar a aplicação`);
 });
