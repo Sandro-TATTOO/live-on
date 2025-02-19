@@ -18,13 +18,38 @@ wss.on('connection', (ws) => {
     console.log('Novo cliente conectado');
 
     ws.on('message', (message) => {
-        // Transmitir o frame para todos os clientes conectados
-        wss.clients.forEach((client) => {
-            if (client !== ws && client.readyState === WebSocket.OPEN) {
-                client.send(message);
+        try {
+            const data = JSON.parse(message);
+            
+            if (data.type === 'message') {
+                // Transmitir mensagem de chat para todos os clientes
+                wss.clients.forEach((client) => {
+                    if (client.readyState === WebSocket.OPEN) {
+                        client.send(JSON.stringify({
+                            type: 'message',
+                            content: data.content,
+                            timestamp: new Date().toISOString()
+                        }));
+                    }
+                });
+            } else {
+                // Transmitir o frame de vídeo para outros clientes
+                wss.clients.forEach((client) => {
+                    if (client !== ws && client.readyState === WebSocket.OPEN) {
+                        client.send(message);
+                    }
+                });
             }
-        });
+        } catch (error) {
+            // Se não for JSON, trata como frame de vídeo
+            wss.clients.forEach((client) => {
+                if (client !== ws && client.readyState === WebSocket.OPEN) {
+                    client.send(message);
+                }
+            });
+        }
     });
+
 
     ws.on('error', (error) => {
         console.error('Erro na conexão WebSocket:', error);
