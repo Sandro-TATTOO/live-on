@@ -1,233 +1,101 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Client</title>
+    <title>Client - Transmissão de Vídeo</title>
     <style>
         video {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100vw;
-            height: 100vh;
-            object-fit: cover;
-            z-index: 1;
-        }
-
-
-        
-        #chat-container {
-            position: fixed;
-            bottom: 20px;
-            right: 20px;
-            width: 300px;
-            max-width: 90%;
-            height: 40vh;
-            max-height: 400px;
-            background: transparent;
-            border-radius: 10px;
-            z-index: 2;
-            overflow: hidden;
-            transition: transform 0.3s ease;
-            backdrop-filter: blur(5px);
-        }
-
-
-        @media (max-width: 768px) {
-            #chat-container {
-                width: 90%;
-                height: 35vh;
-                right: 5%;
-                bottom: 10px;
-            }
-        }
-
-
-
-        #chat-messages {
-            position: absolute;
-            bottom: 60px;
-            left: 0;
-            right: 0;
-            max-height: calc(100% - 70px);
-            overflow-y: auto;
-            padding: 15px;
-            color: white;
-            background: transparent;
-        }
-
-
-        #chat-messages div {
-            background: transparent;
-            padding: 5px;
-            margin-bottom: 5px;
-            word-break: break-word;
-        }
-
-
-
-
-        #chat-messages div {
-            background: transparent;
-            padding: 5px;
-            margin-bottom: 5px;
-            word-break: break-word;
-        }
-
-        #chat-input {
-            position: absolute;
-            bottom: 0;
             width: 100%;
-            padding: 10px;
-            background: rgba(0, 0, 0, 0.5);
-            border: none;
-            border-radius: 5px;
+            max-width: 600px;
+            background: #000;
         }
-
-        #message-input {
-            background: transparent;
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            padding: 8px;
-            width: calc(100% - 90px);
-            border-radius: 3px;
-            color: white;
+        .controls {
+            margin-top: 20px;
         }
-
-
-
-
-
-
-        #send-button {
-            background: #007bff;
-            color: white;
-            border: none;
-            padding: 8px 15px;
-            margin-left: 5px;
+        button {
+            padding: 10px 20px;
+            margin: 5px;
+            font-size: 16px;
             cursor: pointer;
-            border-radius: 3px;
-            transition: background 0.3s ease;
-        }
-
-        #send-button:hover {
-            background: #0056b3;
         }
     </style>
-
 </head>
 <body>
-    <h1>Client</h1>
-    <video id="webcam" autoplay></video>
-    
-    <div id="chat-container">
-        <div id="chat-messages"></div>
-        <div id="chat-input">
-            <input type="text" id="message-input" placeholder="Digite sua mensagem...">
-            <button id="send-button">Enviar</button>
-        </div>
+    <h1>Client - Transmissão de Vídeo</h1>
+    <video id="video" autoplay></video>
+    <div class="controls">
+        <button id="startBtn">Iniciar Transmissão</button>
+        <button id="stopBtn" disabled>Parar Transmissão</button>
     </div>
 
-
     <script>
-        let nickname = '';
-        while (!nickname || nickname.trim() === '') {
-            nickname = prompt('Por favor, insira um apelido para participar do chat:');
-        }
-        
-        const video = document.getElementById('webcam');
-        const ws = new WebSocket('ws://' + window.location.host);
-        
-        ws.onopen = () => {
-            ws.send(JSON.stringify({ type: 'nickname', content: nickname }));
-            console.log('Conectado ao servidor WebSocket');
-        };
+        const video = document.getElementById('video');
+        const startBtn = document.getElementById('startBtn');
+        const stopBtn = document.getElementById('stopBtn');
+        let mediaRecorder;
+        let ws;
 
-        
-        // Chat elements
-        const chatMessages = document.getElementById('chat-messages');
-        const messageInput = document.getElementById('message-input');
-        const sendButton = document.getElementById('send-button');
-        
-        // Send message
-        sendButton.addEventListener('click', () => {
-            const message = messageInput.value.trim();
-            if (message) {
-                ws.send(JSON.stringify({ 
-                    type: 'message', 
-                    content: message,
-                    nickname: nickname 
-                }));
-                messageInput.value = '';
-            }
-        });
-
-        
-        // Handle incoming messages
-        ws.onmessage = (event) => {
-            if (event.data instanceof Blob) {
-                // Handle video frame
-                return;
-            }
+        // Conectar ao WebSocket
+        function connectWebSocket() {
+            ws = new WebSocket('wss://' + window.location.host);
             
-            try {
-                const data = JSON.parse(event.data);
-                    if (data.type === 'message') {
-                        const messageElement = document.createElement('div');
-                        messageElement.innerHTML = `<strong>${data.nickname}:</strong> ${data.content}`;
-                        chatMessages.appendChild(messageElement);
-                        chatMessages.scrollTop = chatMessages.scrollHeight;
+            ws.onopen = () => {
+                // Registrar como client
+                const clientId = 'client-' + Math.random().toString(36).substr(2, 9);
+                ws.send(JSON.stringify({
+                    type: 'register',
+                    role: 'client',
+                    id: clientId
+                }));
+                console.log('Conectado como Client');
+            };
 
-                    }
-
-            } catch (error) {
-                console.error('Erro ao processar mensagem:', error);
-            }
-        };
-
-
-
-        // Acessar a webcam
-        navigator.mediaDevices.getUserMedia({ video: true })
-            .then(stream => {
-                video.srcObject = stream;
-                startSendingFrames();
-            })
-            .catch(error => {
-                console.error('Erro ao acessar a webcam:', error);
-            });
-
-        function startSendingFrames() {
-            const canvas = document.createElement('canvas');
-            canvas.width = 640;
-            canvas.height = 480;
-            const ctx = canvas.getContext('2d');
-
-            setInterval(() => {
-                // Capturar frame do vídeo
-                ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-                canvas.toBlob((blob) => {
-                    const reader = new FileReader();
-                    reader.onload = () => {
-                        if (ws.readyState === WebSocket.OPEN) {
-                            ws.send(blob);
-                        }
-                    };
-                    reader.readAsDataURL(blob);
-                }, 'image/jpeg', 0.8);
-
-
-
-            }, 100); // Envia frames a cada 100ms
+            ws.onerror = (error) => {
+                console.error('Erro no WebSocket:', error);
+            };
         }
 
-        ws.onopen = () => {
-            console.log('Conectado ao servidor WebSocket');
-        };
+        // Iniciar captura de vídeo
+        async function startCapture() {
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+                video.srcObject = stream;
+                
+                mediaRecorder = new MediaRecorder(stream, {
+                    mimeType: 'video/webm; codecs=vp9'
+                });
 
-        ws.onerror = (error) => {
-            console.error('Erro na conexão WebSocket:', error);
-        };
+                mediaRecorder.ondataavailable = (event) => {
+                    if (event.data.size > 0 && ws.readyState === WebSocket.OPEN) {
+                        ws.send(event.data);
+                    }
+                };
+
+                mediaRecorder.start(100); // Captura frames a cada 100ms
+                startBtn.disabled = true;
+                stopBtn.disabled = false;
+            } catch (error) {
+                console.error('Erro ao acessar a câmera:', error);
+            }
+        }
+
+        // Parar captura de vídeo
+        function stopCapture() {
+            if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+                mediaRecorder.stop();
+                video.srcObject.getTracks().forEach(track => track.stop());
+                startBtn.disabled = false;
+                stopBtn.disabled = true;
+            }
+        }
+
+        // Event listeners
+        startBtn.addEventListener('click', startCapture);
+        stopBtn.addEventListener('click', stopCapture);
+
+        // Iniciar conexão WebSocket
+        connectWebSocket();
     </script>
 </body>
 </html>

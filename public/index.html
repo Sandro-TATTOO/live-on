@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Transmissão de Vídeo e Chat</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        video {
+            width: 100%;
+            background: #000;
+        }
+        .chat {
+            margin-top: 20px;
+            background: #fff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .messages {
+            height: 300px;
+            overflow-y: auto;
+            border: 1px solid #ddd;
+            padding: 10px;
+            margin-bottom: 10px;
+        }
+        .message {
+            margin-bottom: 10px;
+        }
+        .message .nickname {
+            font-weight: bold;
+            color: #333;
+        }
+        .message .timestamp {
+            font-size: 0.8em;
+            color: #666;
+        }
+        .message .content {
+            margin-top: 5px;
+        }
+        .input-group {
+            display: flex;
+            gap: 10px;
+        }
+        input {
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            flex: 1;
+        }
+        button {
+            padding: 10px 20px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Transmissão de Vídeo e Chat</h1>
+        <video id="video" autoplay></video>
+        <div class="chat">
+            <div class="messages" id="messages"></div>
+            <div class="input-group">
+                <input type="text" id="messageInput" placeholder="Digite sua mensagem...">
+                <button onclick="sendMessage()">Enviar</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Configurações do WebSocket
+        const ws = new WebSocket('wss://' + window.location.host);
+
+        // Elementos da interface
+        const video = document.getElementById('video');
+        const messages = document.getElementById('messages');
+        const messageInput = document.getElementById('messageInput');
+
+        // Configuração do vídeo
+        navigator.mediaDevices.getUserMedia({ video: true })
+            .then(stream => {
+                video.srcObject = stream;
+                const mediaRecorder = new MediaRecorder(stream, {
+                    mimeType: 'video/webm; codecs=vp9'
+                });
+
+                mediaRecorder.ondataavailable = (event) => {
+                    if (event.data.size > 0) {
+                        ws.send(event.data);
+                    }
+                };
+
+                mediaRecorder.start(100);
+            })
+            .catch(error => {
+                console.error('Erro ao acessar a câmera:', error);
+            });
+
+        // Manipulação de mensagens
+        ws.onmessage = (event) => {
+            if (event.data instanceof Blob) {
+                // Se for um blob, é um frame de vídeo
+                const video = document.createElement('video');
+                video.src = URL.createObjectURL(event.data);
+                video.autoplay = true;
+                document.body.appendChild(video);
+            } else {
+                // Se for texto, é uma mensagem de chat
+                const message = JSON.parse(event.data);
+                const messageElement = document.createElement('div');
+                messageElement.className = 'message';
+                messageElement.innerHTML = `
+                    <div class="nickname">${message.nickname}</div>
+                    <div class="timestamp">${new Date(message.timestamp).toLocaleTimeString()}</div>
+                    <div class="content">${message.content}</div>
+                `;
+                messages.appendChild(messageElement);
+                messages.scrollTop = messages.scrollHeight;
+            }
+        };
+
+        // Função para enviar mensagem
+        function sendMessage() {
+            const message = messageInput.value.trim();
+            if (message) {
+                ws.send(JSON.stringify({
+                    type: 'message',
+                    content: message
+                }));
+                messageInput.value = '';
+            }
+        }
+
+        // Enviar mensagem ao pressionar Enter
+        messageInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                sendMessage();
+            }
+        });
+    </script>
+</body>
+</html>
