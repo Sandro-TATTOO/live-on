@@ -17,9 +17,8 @@ app.use(express.static(path.join(__dirname, 'public')));
 wss.on('connection', (ws) => {
     console.log('Novo cliente conectado');
 
-    // Armazenar apelido do usuário
-    let nickname = 'Anônimo';
-    
+    let nickname = 'Anônimo'; // Armazenar apelido do usuário
+
     ws.on('message', (message) => {
         try {
             const data = JSON.parse(message);
@@ -37,10 +36,8 @@ wss.on('connection', (ws) => {
                             nickname: data.nickname || nickname,
                             timestamp: new Date().toISOString()
                         }));
-
                     }
                 });
-
             } else {
                 // Transmitir o frame de vídeo para outros clientes
                 wss.clients.forEach((client) => {
@@ -58,7 +55,6 @@ wss.on('connection', (ws) => {
             });
         }
     });
-
 
     ws.on('error', (error) => {
         console.error('Erro na conexão WebSocket:', error);
