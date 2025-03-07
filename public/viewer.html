@@ -150,10 +150,10 @@
         sendButton.addEventListener('click', () => {
             const message = messageInput.value.trim();
             if (message) {
-                ws.send(JSON.stringify({ 
-                    type: 'message', 
+                ws.send(JSON.stringify({
+                    type: 'message',
                     content: message,
-                    nickname: nickname 
+                    nickname: nickname
                 }));
                 messageInput.value = '';
             }
