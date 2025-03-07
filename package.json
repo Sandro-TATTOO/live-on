@@ -1,11 +1,4 @@
 {
-  "dependencies": {
-    "express": "^4.21.2",
-    "ws": "^8.18.0"
-  }
-}
-
-{
   "name": "live-on",
   "version": "1.0.0",
   "main": "server.js",

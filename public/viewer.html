@@ -1,3 +1,4 @@
+<!-- live-on/public/viewer.html -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -7,50 +8,15 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="icon" href="data:,">
     <style>
-        body {
-            margin: 0;
-            padding: 0;
-            font-family: Arial, sans-serif;
-            background-color: #333; /* Fundo cinza mantido */
-            overflow: hidden;
-        }
-        h1 {
-            display: none;
-        }
-        #thumbnail-container {
+        #video-frame {
             position: fixed;
             top: 0;
             left: 0;
-            width: 200px; /* Largura padrão */
+            width: 100vw;
             height: 100vh;
-            overflow-y: auto;
-            background: rgba(0, 0, 0, 0.8);
-            z-index: 2;
-            padding: 10px;
-            box-sizing: border-box;
-            transition: transform 0.3s ease; /* Para animação ao recolher */
-        }
-        #thumbnail-container.collapsed {
-            transform: translateX(-100%); /* Recolhe a barra */
-        }
-        .thumbnail {
-            width: 100%;
-            height: 120px;
             object-fit: cover;
-            margin-bottom: 10px;
-            cursor: pointer;
-            border: 2px solid transparent;
-            transition: border 0.3s ease;
-        }
-        .thumbnail:hover {
-            border: 2px solid #007bff;
-        }
-        .thumbnail-label {
-            color: white;
-            text-align: center;
-            margin-bottom: 5px;
-            font-size: 14px;
-            text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.5);
+            z-index: 1;
+            background-color: #000;
         }
         #chat-container {
             position: fixed;
@@ -62,32 +28,28 @@
             max-height: 400px;
             background: transparent;
             border-radius: 10px;
-            z-index: 3;
+            z-index: 2;
             overflow: hidden;
             transition: transform 0.3s ease;
             backdrop-filter: blur(1px);
         }
-        #toggle-thumbnails-button {
-            position: fixed;
-            top: 20px;
-            left: 210px; /* Ajustado para ficar ao lado da barra */
-            z-index: 4;
-            background: rgba(0, 0, 0, 0.7);
-            color: white;
-            border: none;
-            padding: 8px 15px;
-            border-radius: 3px;
-            cursor: pointer;
-            transition: all 0.3s ease;
+        @media (max-width: 768px) {
+            #chat-container {
+                width: 90%;
+                height: 35vh;
+                right: 5%;
+                bottom: 10px;
+            }
         }
-        #toggle-thumbnails-button:hover {
-            background: rgba(0, 0, 0, 0.9);
+        #chat-container.collapsed {
+            transform: translateX(100%);
+            display: none;
         }
         #toggle-chat-button {
             position: fixed;
             top: 20px;
             right: 20px;
-            z-index: 4;
+            z-index: 3;
             background: rgba(0, 0, 0, 0.7);
             color: white;
             border: none;
@@ -146,74 +108,14 @@
         #send-button:hover {
             background: #0056b3;
         }
-        #nickname-display {
-            position: fixed;
-            top: 10px;
-            left: 260px; /* Ajustado para ficar ao lado do botão de thumbnails */
-            z-index: 3;
-            background: rgba(0, 0, 0, 0.1);
-            color: white;
-            padding: 5px 10px;
-            border-radius: 3px;
-            font-size: 24px;
-            font-weight: bold;
-            text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.5);
-            transition: left 0.3s ease; /* Para acompanhar o recolhimento */
-        }
-        /* Media Queries para Responsividade */
-        @media (max-width: 768px) {
-            #thumbnail-container {
-                width: 150px; /* Reduz a largura em tablets */
-            }
-            #toggle-thumbnails-button {
-                left: 160px;
-            }
-            #nickname-display {
-                left: 210px;
-            }
-            #chat-container {
-                width: 90%;
-                height: 35vh;
-                right: 5%;
-                bottom: 10px;
-            }
-        }
-        @media (max-width: 480px) {
-            #thumbnail-container {
-                width: 100px; /* Reduz ainda mais em celulares */
-            }
-            #toggle-thumbnails-button {
-                left: 110px;
-            }
-            #nickname-display {
-                left: 160px;
-            }
-            .thumbnail {
-                height: 80px; /* Reduz altura dos thumbnails */
-            }
-            .thumbnail-label {
-                font-size: 12px; /* Reduz fonte */
-            }
-        }
-        /* Ajuste quando thumbnails estão recolhidos */
-        #thumbnail-container.collapsed ~ #toggle-thumbnails-button {
-            left: 20px;
-        }
-        #thumbnail-container.collapsed ~ #nickname-display {
-            left: 70px;
-        }
     </style>
 </head>
 <body>
     <h1>Viewer</h1>
-    <div id="thumbnail-container"></div>
-    <button id="toggle-thumbnails-button" title="Mostrar/Esconder Thumbnails">
-        <i class="fas fa-bars"></i>
-    </button>
     <button id="toggle-chat-button" title="Mostrar/Esconder Chat">
         <i class="fas fa-comments"></i>
     </button>
-    <div id="nickname-display"></div>
+    <img id="video-frame" src="" alt="Video Stream">
     <div id="chat-container">
         <div id="chat-messages"></div>
         <div id="chat-input">
@@ -223,22 +125,16 @@
     </div>
 
     <script>
-        let nickname = localStorage.getItem('viewerNickname');
-        if (!nickname || nickname.trim() === '') {
-            while (!nickname || nickname.trim() === '') {
-                nickname = prompt('Por favor, insira um apelido para participar do chat:');
-                if (!nickname || nickname.trim() === '') {
-                    alert('O apelido não pode estar vazio. Por favor, insira um apelido válido.');
-                }
+        let nickname = '';
+        while (!nickname || nickname.trim() === '') {
+            nickname = prompt('Por favor, insira um apelido para participar do chat:');
+            if (!nickname || nickname.trim() === '') {
+                alert('O apelido não pode estar vazio. Por favor, insira um apelido válido.');
             }
-            localStorage.setItem('viewerNickname', nickname);
         }
 
-        document.getElementById('nickname-display').textContent = nickname;
-
-        const ws = new WebSocket('ws://' + window.location.host);
-        const thumbnailContainer = document.getElementById('thumbnail-container');
-        const thumbnails = new Map();
+        const ws = new WebSocket('wss://' + window.location.host + '/ws');
+        const videoFrame = document.getElementById('video-frame');
 
         ws.onopen = () => {
             ws.send(JSON.stringify({ type: 'nickname', content: nickname, userType: 'viewer' }));
@@ -250,7 +146,6 @@
         const messageInput = document.getElementById('message-input');
         const sendButton = document.getElementById('send-button');
         const toggleChatButton = document.getElementById('toggle-chat-button');
-        const toggleThumbnailsButton = document.getElementById('toggle-thumbnails-button');
 
         sendButton.addEventListener('click', () => {
             const message = messageInput.value.trim();
@@ -264,17 +159,6 @@
             }
         });
 
-        toggleThumbnailsButton.addEventListener('click', () => {
-            thumbnailContainer.classList.toggle('collapsed');
-            toggleThumbnailsButton.querySelector('i').classList.toggle('fa-bars');
-            toggleThumbnailsButton.querySelector('i').classList.toggle('fa-times');
-        });
-
-        toggleChatButton.addEventListener('click', () => {
-            chatContainer.classList.toggle('collapsed');
-            toggleChatButton.querySelector('i').classList.toggle('fa-comment-slash', chatContainer.classList.contains('collapsed'));
-        });
-
         function parseMarkdown(text) {
             return text
                 .replace(/\*(.*?)\*/g, '<strong>$1</strong>')
@@ -282,51 +166,35 @@
         }
 
         ws.onmessage = (event) => {
-            try {
-                const data = JSON.parse(event.data);
-                if (data.type === 'stream') {
-                    const clientNickname = data.nickname;
-                    const frameSrc = `data:image/jpeg;base64,${data.content}`;
-
-                    if (!thumbnails.has(clientNickname)) {
-                        const thumbnailDiv = document.createElement('div');
-                        const thumbnailLabel = document.createElement('div');
-                        const thumbnailImg = document.createElement('img');
-
-                        thumbnailLabel.textContent = clientNickname;
-                        thumbnailLabel.className = 'thumbnail-label';
-                        thumbnailImg.src = frameSrc;
-                        thumbnailImg.className = 'thumbnail';
-
-                        thumbnailImg.addEventListener('click', () => {
-                            window.location.href = `/viewer-stream.html?nickname=${encodeURIComponent(clientNickname)}`;
-                        });
-
-                        thumbnailDiv.appendChild(thumbnailLabel);
-                        thumbnailDiv.appendChild(thumbnailImg);
-                        thumbnailContainer.appendChild(thumbnailDiv);
-
-                        thumbnails.set(clientNickname, thumbnailImg);
-                    } else {
-                        thumbnails.get(clientNickname).src = frameSrc;
+            if (event.data instanceof Blob) {
+                const url = URL.createObjectURL(event.data);
+                videoFrame.src = url;
+            } else {
+                try {
+                    const data = JSON.parse(event.data);
+                    if (data.type === 'message') {
+                        const messageElement = document.createElement('div');
+                        messageElement.innerHTML = `<strong>${data.nickname}:</strong> ${parseMarkdown(data.content)}`;
+                        chatMessages.appendChild(messageElement);
+                        chatMessages.scrollTop = chatMessages.scrollHeight;
+                    } else if (data.type === 'private-message') {
+                        const messageElement = document.createElement('div');
+                        messageElement.innerHTML = `<strong>[Privado de ${data.from}]:</strong> ${parseMarkdown(data.content)}`;
+                        chatMessages.appendChild(messageElement);
+                        chatMessages.scrollTop = chatMessages.scrollHeight;
+                        const audio = new Audio('https://www.soundjay.com/buttons/beep-01a.mp3');
+                        audio.play();
                     }
-                } else if (data.type === 'message') {
-                    const messageElement = document.createElement('div');
-                    messageElement.innerHTML = `<strong>${data.nickname}:</strong> ${parseMarkdown(data.content)}`;
-                    chatMessages.appendChild(messageElement);
-                    chatMessages.scrollTop = chatMessages.scrollHeight;
-                } else if (data.type === 'private-message') {
-                    const messageElement = document.createElement('div');
-                    messageElement.innerHTML = `<strong>[Privado de ${data.from}]:</strong> ${parseMarkdown(data.content)}`;
-                    chatMessages.appendChild(messageElement);
-                    chatMessages.scrollTop = chatMessages.scrollHeight;
-                    const audio = new Audio('https://www.soundjay.com/buttons/beep-01a.mp3');
-                    audio.play();
+                } catch (error) {
+                    console.error('Erro ao processar mensagem:', error);
                 }
-            } catch (error) {
-                console.error('Erro ao processar mensagem:', error);
             }
         };
+
+        toggleChatButton.addEventListener('click', () => {
+            chatContainer.classList.toggle('collapsed');
+            toggleChatButton.querySelector('i').classList.toggle('fa-comment-slash', chatContainer.classList.contains('collapsed'));
+        });
 
         ws.onerror = (error) => {
             console.error('Erro na conexão WebSocket:', error);

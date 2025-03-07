@@ -1,3 +1,4 @@
+<!-- live-on/public/cliente.html -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -5,37 +6,20 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Client</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link rel="icon" href="data:,">
     <style>
-        body {
-            margin: 0;
-            padding: 0;
-            font-family: Arial, sans-serif;
-            background-color: #f0f0f0;
-            overflow: hidden;
-        }
-        h1 {
-            display: none;
-        }
-        #video-container {
+        video {
             position: fixed;
             top: 0;
             left: 0;
             width: 100vw;
             height: 100vh;
-            overflow: hidden;
-            z-index: 1;
-        }
-        #local-video {
-            width: 100%;
-            height: 100%;
             object-fit: cover;
-            background-color: #333; /* Fundo cinza quando a câmera está desligada */
+            z-index: 1;
         }
         #chat-container {
             position: fixed;
             bottom: 20px;
-            right: 20px;
+            left: 20px;
             width: 300px;
             max-width: 90%;
             height: 40vh;
@@ -45,35 +29,15 @@
             z-index: 2;
             overflow: hidden;
             transition: transform 0.3s ease;
-            backdrop-filter: blur(1px);
+            backdrop-filter: blur(2px);
         }
         @media (max-width: 768px) {
             #chat-container {
                 width: 90%;
                 height: 35vh;
-                right: 5%;
+                left: 5%;
                 bottom: 10px;
             }
-        }
-        #chat-container.collapsed {
-            transform: translateX(100%);
-            display: none;
-        }
-        #toggle-chat-button {
-            position: fixed;
-            top: 20px;
-            right: 20px;
-            z-index: 3;
-            background: rgba(0, 0, 0, 0.7);
-            color: white;
-            border: none;
-            padding: 8px 15px;
-            border-radius: 3px;
-            cursor: pointer;
-            transition: all 0.3s ease;
-        }
-        #toggle-chat-button:hover {
-            background: rgba(0, 0, 0, 0.9);
         }
         #chat-messages {
             position: absolute;
@@ -91,15 +55,17 @@
             padding: 5px;
             margin-bottom: 5px;
             word-break: break-word;
+            border-radius: 3px;
+            text-shadow: 0 0 2px rgba(0, 0, 0, 0.5);
         }
         #chat-input {
             position: absolute;
             bottom: 0;
             width: 100%;
             padding: 10px;
-            background: rgba(0, 0, 0, 0.5);
+            background: rgba(0, 0, 0, 0.1);
             border: none;
-            border-radius: 0 0 5px 5px;
+            border-radius: 5px;
         }
         #message-input {
             background: transparent;
@@ -122,49 +88,56 @@
         #send-button:hover {
             background: #0056b3;
         }
-        #toggle-camera-button {
+        .controls {
             position: fixed;
             top: 20px;
-            left: 20px;
+            right: 20px;
             z-index: 3;
+            display: flex;
+            gap: 10px;
+        }
+        .control-btn {
+            background: rgba(0, 0, 0, 0.7);
+            border: none;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            color: white;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .control-btn:hover {
+            background: rgba(0, 0, 0, 0.9);
+            transform: scale(1.1);
+        }
+        #quality-select {
             background: rgba(0, 0, 0, 0.7);
             color: white;
             border: none;
-            padding: 8px 15px;
+            padding: 5px;
             border-radius: 3px;
-            cursor: pointer;
-            transition: all 0.3s ease;
-        }
-        #toggle-camera-button:hover {
-            background: rgba(0, 0, 0, 0.9);
-        }
-        #nickname-display {
-            position: fixed;
-            top: 60px;
-            left: 20px;
-            z-index: 3;
-            background: rgba(0, 0, 0, 0.1);
-            color: white;
-            padding: 5px 10px;
-            border-radius: 3px;
-            font-size: 24px;
-            font-weight: bold;
-            text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.5);
         }
     </style>
 </head>
 <body>
     <h1>Client</h1>
-    <div id="video-container">
-        <video id="local-video" autoplay playsinline muted alt="Client"></video>
+    <div class="controls">
+        <button id="camera-toggle" class="control-btn" title="Ligar/Desligar Câmera">
+            <i class="fas fa-video"></i>
+        </button>
+        <button id="chat-toggle" class="control-btn" title="Mostrar/Esconder Chat">
+            <i class="fas fa-comments"></i>
+        </button>
+        <select id="quality-select" title="Qualidade do Vídeo">
+            <option value="0.4">Baixa</option>
+            <option value="0.8" selected>Média</option>
+            <option value="1.0">Alta</option>
+        </select>
     </div>
-    <button id="toggle-camera-button" title="Ocultar/Mostrar Câmera">
-        <i class="fas fa-video"></i>
-    </button>
-    <button id="toggle-chat-button" title="Mostrar/Esconder Chat">
-        <i class="fas fa-comments"></i>
-    </button>
-    <div id="nickname-display"></div>
+    <video id="webcam" autoplay></video>
     <div id="chat-container">
         <div id="chat-messages"></div>
         <div id="chat-input">
@@ -177,57 +150,20 @@
         let nickname = '';
         while (!nickname || nickname.trim() === '') {
             nickname = prompt('Por favor, insira um apelido para participar do chat:');
-            if (!nickname || nickname.trim() === '') {
-                alert('O apelido não pode estar vazio. Por favor, insira um apelido válido.');
-            }
         }
 
-        document.getElementById('nickname-display').textContent = nickname;
-
-        const ws = new WebSocket('ws://' + window.location.host);
-        let localStream = null;
+        const video = document.getElementById('webcam');
+        const ws = new WebSocket('wss://' + window.location.host + '/ws');
+        let sendFramesInterval;
 
         ws.onopen = () => {
-            ws.send(JSON.stringify({ type: 'nickname', content: nickname, userType: 'client' }));
+            ws.send(JSON.stringify({ type: 'nickname', content: nickname }));
             console.log('Conectado ao servidor WebSocket');
-            startCamera();
         };
 
-        const videoContainer = document.getElementById('video-container');
-        const localVideo = document.getElementById('local-video');
-        const chatContainer = document.getElementById('chat-container');
         const chatMessages = document.getElementById('chat-messages');
         const messageInput = document.getElementById('message-input');
         const sendButton = document.getElementById('send-button');
-        const toggleChatButton = document.getElementById('toggle-chat-button');
-        const toggleCameraButton = document.getElementById('toggle-camera-button');
-
-        async function startCamera() {
-            try {
-                localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
-                localVideo.srcObject = localStream;
-                sendFrames();
-            } catch (error) {
-                console.error('Erro ao acessar a câmera:', error);
-                chatMessages.innerHTML += '<div>Erro ao acessar a câmera. Verifique as permissões.</div>';
-            }
-        }
-
-        function sendFrames() {
-            if (localStream && localVideo.srcObject) {
-                const canvas = document.createElement('canvas');
-                canvas.width = localVideo.videoWidth || 640;
-                canvas.height = localVideo.videoHeight || 480;
-                const context = canvas.getContext('2d');
-                context.drawImage(localVideo, 0, 0, canvas.width, canvas.height);
-                canvas.toBlob((blob) => {
-                    if (blob && ws.readyState === WebSocket.OPEN) {
-                        ws.send(blob);
-                    }
-                }, 'image/jpeg', 0.9);
-            }
-            requestAnimationFrame(sendFrames);
-        }
 
         sendButton.addEventListener('click', () => {
             const message = messageInput.value.trim();
@@ -248,6 +184,9 @@
         }
 
         ws.onmessage = (event) => {
+            if (event.data instanceof Blob) {
+                return;
+            }
             try {
                 const data = JSON.parse(event.data);
                 if (data.type === 'message') {
@@ -255,6 +194,8 @@
                     messageElement.innerHTML = `<strong>${data.nickname}:</strong> ${parseMarkdown(data.content)}`;
                     chatMessages.appendChild(messageElement);
                     chatMessages.scrollTop = chatMessages.scrollHeight;
+                } else if (data.type === 'toggle-camera') {
+                    toggleCameraSending();
                 } else if (data.type === 'private-message') {
                     const messageElement = document.createElement('div');
                     messageElement.innerHTML = `<strong>[Privado de ${data.from}]:</strong> ${parseMarkdown(data.content)}`;
@@ -262,51 +203,81 @@
                     chatMessages.scrollTop = chatMessages.scrollHeight;
                     const audio = new Audio('https://www.soundjay.com/buttons/beep-01a.mp3');
                     audio.play();
-                } else if (data.type === 'toggle-camera') {
-                    toggleCamera();
                 }
             } catch (error) {
                 console.error('Erro ao processar mensagem:', error);
             }
         };
 
+        navigator.mediaDevices.getUserMedia({ video: true })
+            .then(stream => {
+                video.srcObject = stream;
+                startSendingFrames();
+            })
+            .catch(error => {
+                console.error('Erro ao acessar a webcam:', error);
+            });
+
+        let isSendingFrames = true;
+        let frameRate = 200;
+        let quality = 0.8;
+
+        function startSendingFrames() {
+            const canvas = document.createElement('canvas');
+            canvas.width = 640;
+            canvas.height = 480;
+            const ctx = canvas.getContext('2d');
+
+            sendFramesInterval = setInterval(() => {
+                if (isSendingFrames) {
+                    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+                    canvas.toBlob((blob) => {
+                        if (ws.readyState === WebSocket.OPEN) {
+                            ws.send(blob);
+                        }
+                    }, 'image/jpeg', quality);
+                }
+            }, frameRate);
+        }
+
+        function toggleCameraSending() {
+            isSendingFrames = !isSendingFrames;
+            console.log(`Envio de frames ${isSendingFrames ? 'ativado' : 'desativado'}`);
+        }
+
+        document.getElementById('quality-select').addEventListener('change', (e) => {
+            quality = parseFloat(e.target.value);
+            console.log(`Qualidade ajustada para: ${quality}`);
+        });
+
+        const cameraToggle = document.getElementById('camera-toggle');
+        const chatToggle = document.getElementById('chat-toggle');
+        const chatContainer = document.getElementById('chat-container');
+
+        let isCameraOn = true;
+        let isChatVisible = true;
+
+        cameraToggle.addEventListener('click', () => {
+            isCameraOn = !isCameraOn;
+            video.style.display = isCameraOn ? 'block' : 'none';
+            cameraToggle.querySelector('i').classList.toggle('fa-video-slash', !isCameraOn);
+            toggleCameraSending();
+        });
+
+        chatToggle.addEventListener('click', () => {
+            isChatVisible = !isChatVisible;
+            chatContainer.style.display = isChatVisible ? 'block' : 'none';
+            chatToggle.querySelector('i').classList.toggle('fa-comment-slash', !isChatVisible);
+        });
+
         ws.onerror = (error) => {
             console.error('Erro na conexão WebSocket:', error);
-            chatMessages.innerHTML += '<div>Erro na conexão com o servidor. Tente recarregar a página.</div>';
         };
 
         ws.onclose = () => {
             console.log('Conexão WebSocket fechada');
-            chatMessages.innerHTML += '<div>Conexão com o servidor perdida. Tente recarregar a página.</div>';
-            if (localStream) {
-                localStream.getTracks().forEach(track => track.stop());
-            }
+            clearInterval(sendFramesInterval);
         };
-
-        toggleChatButton.addEventListener('click', () => {
-            chatContainer.classList.toggle('collapsed');
-            toggleChatButton.querySelector('i').classList.toggle('fa-comment-slash', chatContainer.classList.contains('collapsed'));
-        });
-
-        let cameraOn = true;
-        toggleCameraButton.addEventListener('click', toggleCamera);
-
-        function toggleCamera() {
-            if (cameraOn) {
-                if (localStream) {
-                    localStream.getTracks().forEach(track => track.stop());
-                    localStream = null;
-                }
-                localVideo.srcObject = null;
-                toggleCameraButton.querySelector('i').classList.remove('fa-video');
-                toggleCameraButton.querySelector('i').classList.add('fa-video-slash');
-            } else {
-                startCamera();
-                toggleCameraButton.querySelector('i').classList.remove('fa-video-slash');
-                toggleCameraButton.querySelector('i').classList.add('fa-video');
-            }
-            cameraOn = !cameraOn;
-        }
     </script>
 </body>
 </html>
