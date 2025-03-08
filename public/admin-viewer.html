@@ -1,138 +1,110 @@
-<!-- live-on/public/admin-viewer.html -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Admin - Gerenciar Viewers</title>
+    <title>Admin Viewer</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
-        body {
-            font-family: Arial, sans-serif;
-            margin: 20px;
-            background-color: #f0f0f0;
-        }
-        h1 {
-            text-align: center;
-        }
-        #viewer-list {
-            max-width: 600px;
-            margin: 0 auto;
-            background: white;
-            padding: 20px;
-            border-radius: 10px;
-            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
-        }
-        .viewer {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 10px;
-            border-bottom: 1px solid #ddd;
-        }
-        .viewer:last-child {
-            border-bottom: none;
-        }
-        .viewer span {
-            font-weight: bold;
-        }
-        .controls {
-            display: flex;
-            gap: 10px;
-        }
-        button {
-            background: #007bff;
-            color: white;
-            border: none;
-            padding: 8px 15px;
-            border-radius: 5px;
-            cursor: pointer;
-            transition: background 0.3s ease;
-        }
-        button:hover {
-            background: #0056b3;
-        }
-        #private-message-input {
-            padding: 8px;
-            border: 1px solid #ccc;
-            border-radius: 5px;
-            width: 200px;
-            margin-top: 20px;
-        }
+        /* Mantido igual ao original */
+        body { font-family: Arial, sans-serif; background-color: #f0f0f0; margin: 0; padding: 0; }
+        .container { padding: 20px; }
+        .control-btn { background: #007bff; border: none; border-radius: 5px; color: white; padding: 10px 20px; cursor: pointer; margin: 5px; transition: background 0.3s ease; }
+        .control-btn:hover { background: #0056b3; }
+        .panel { background: white; border-radius: 5px; padding: 20px; box-shadow: 0 0 10px rgba(0, 0, 0, 0.1); margin-bottom: 20px; }
+        .panel h2 { margin-top: 0; }
+        .viewer-list { list-style: none; padding: 0; }
+        .viewer-list li { background: #f9f9f9; border: 1px solid #ddd; border-radius: 3px; padding: 10px; margin-bottom: 5px; display: flex; justify-content: space-between; align-items: center; }
+        .action-btn { background: #dc3545; border: none; border-radius: 3px; color: white; padding: 5px 10px; cursor: pointer; margin-left: 5px; }
+        .action-btn.toggle-camera { background: #28a745; }
+        .action-btn.message { background: #17a2b8; }
+        .nav-bar { margin-top: 20px; text-align: center; }
+        .nav-btn { background: #6c757d; border: none; border-radius: 5px; color: white; padding: 8px 15px; cursor: pointer; margin: 5px; transition: background 0.3s ease; }
+        .nav-btn:hover { background: #5a6268; }
     </style>
 </head>
 <body>
-    <h1>Admin - Gerenciar Viewers</h1>
-    <div id="viewer-list"></div>
-    <div style="text-align: center; margin-top: 20px;">
-        <input type="text" id="private-message-input" placeholder="Mensagem privada para todos">
-        <button onclick="sendPrivateMessageToAll()">Enviar para Todos</button>
+    <div class="container">
+        <h1>Admin Viewer</h1>
+        <button class="control-btn" onclick="window.location.href='/admin.html'">Voltar ao Dashboard</button>
+        <div class="panel">
+            <h2>Viewers Conectados</h2>
+            <ul id="logged-viewers" class="viewer-list">
+                <li>Nenhum viewer conectado</li>
+            </ul>
+        </div>
+        <div class="nav-bar">
+            <button class="nav-btn" onclick="window.location.href='/admin-client.html'">Gerenciar Clientes</button>
+            <button class="nav-btn" onclick="window.location.href='/admin-viewer.html'" disabled>Gerenciar Viewers</button>
+        </div>
     </div>
 
     <script>
-        const urlParams = new URLSearchParams(window.location.search);
-        const password = urlParams.get('password');
         const ws = new WebSocket('wss://' + window.location.host + '/ws');
 
         ws.onopen = () => {
-            ws.send(JSON.stringify({ type: 'nickname', content: 'Admin-Viewer', userType: 'admin-viewer', password: password }));
-            console.log('Conectado ao servidor WebSocket como Admin-Viewer');
+            console.log('Conectado ao servidor WebSocket');
+            ws.send(JSON.stringify({ 
+                type: 'nickname', 
+                content: "AdminViewer", 
+                userType: 'admin-viewer', 
+                password: 'admin123'
+            }));
         };
 
+        const loggedViewers = document.getElementById('logged-viewers');
+
         ws.onmessage = (event) => {
+            console.log('Mensagem recebida:', event.data);
+            let data;
             try {
-                const data = JSON.parse(event.data);
-                if (data.type === 'viewerList') {
-                    updateViewerList(data.content);
-                } else if (data.type === 'error') {
-                    alert(data.content);
-                    window.location.href = '/admin.html';
+                if (typeof event.data === 'string') {
+                    data = JSON.parse(event.data);
+
+                    if (data.type === 'viewerList') {
+                        loggedViewers.innerHTML = '';
+                        if (data.content && data.content.length > 0) {
+                            data.content.forEach(viewer => {
+                                const viewerItem = document.createElement('li');
+                                viewerItem.innerHTML = `
+                                    <span>${viewer}</span>
+                                    <div>
+                                        <button class="action-btn toggle-camera" data-nickname="${viewer}">Toggle Camera</button>
+                                        <button class="action-btn" data-nickname="${viewer}">Disconnect</button>
+                                        <button class="action-btn message" data-nickname="${viewer}">Message</button>
+                                    </div>
+                                `;
+                                loggedViewers.appendChild(viewerItem);
+
+                                viewerItem.querySelector('.toggle-camera').addEventListener('click', () => {
+                                    ws.send(JSON.stringify({ type: 'toggle-camera', target: viewer }));
+                                });
+
+                                viewerItem.querySelector('.action-btn:not(.toggle-camera):not(.message)').addEventListener('click', () => {
+                                    ws.send(JSON.stringify({ type: 'disconnect', target: viewer }));
+                                });
+
+                                viewerItem.querySelector('.message').addEventListener('click', () => {
+                                    const message = prompt(`Digite uma mensagem para ${viewer}:`);
+                                    if (message) {
+                                        ws.send(JSON.stringify({ type: 'private-message', target: viewer, content: message }));
+                                    }
+                                });
+                            });
+                            console.log('Lista de viewers atualizada:', data.content);
+                        } else {
+                            loggedViewers.innerHTML = '<li>Nenhum viewer conectado</li>';
+                        }
+                    } else if (data.type === 'error') {
+                        alert(data.content);
+                        window.location.href = '/admin.html';
+                    }
                 }
             } catch (error) {
                 console.error('Erro ao processar mensagem:', error);
+                alert('Erro ao processar mensagem: ' + error.message);
             }
         };
-
-        function updateViewerList(viewers) {
-            const viewerList = document.getElementById('viewer-list');
-            viewerList.innerHTML = '';
-            viewers.forEach(viewer => {
-                const div = document.createElement('div');
-                div.className = 'viewer';
-                div.innerHTML = `
-                    <span>${viewer}</span>
-                    <div class="controls">
-                        <button onclick="toggleCamera('${viewer}')"><i class="fas fa-video"></i></button>
-                        <button onclick="disconnectViewer('${viewer}')"><i class="fas fa-power-off"></i></button>
-                        <button onclick="sendPrivateMessage('${viewer}')"><i class="fas fa-envelope"></i></button>
-                    </div>
-                `;
-                viewerList.appendChild(div);
-            });
-        }
-
-        function toggleCamera(viewer) {
-            ws.send(JSON.stringify({ type: 'toggle-camera', target: viewer }));
-        }
-
-        function disconnectViewer(viewer) {
-            ws.send(JSON.stringify({ type: 'disconnect', target: viewer }));
-        }
-
-        function sendPrivateMessage(viewer) {
-            const message = prompt(`Digite uma mensagem privada para ${viewer}:`);
-            if (message) {
-                ws.send(JSON.stringify({ type: 'private-message', target: viewer, content: message }));
-            }
-        }
-
-        function sendPrivateMessageToAll() {
-            const message = document.getElementById('private-message-input').value.trim();
-            if (message) {
-                ws.send(JSON.stringify({ type: 'private-message', target: 'all', content: message }));
-                document.getElementById('private-message-input').value = '';
-            }
-        }
 
         ws.onerror = (error) => {
             console.error('Erro na conexão WebSocket:', error);

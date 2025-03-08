@@ -1,4 +1,3 @@
-// live-on/server.js
 const WebSocket = require('ws');
 
 module.exports = (req, res) => {
@@ -16,6 +15,14 @@ module.exports = (req, res) => {
           if (!data || !data.type) return;
 
           if (data.type === 'nickname') {
+            if (data.userType && data.userType.includes('admin')) {
+              const adminPassword = 'admin123';
+              if (data.password !== adminPassword) {
+                ws.send(JSON.stringify({ type: 'error', content: 'Senha inválida para admin' }));
+                ws.close();
+                return;
+              }
+            }
             nickname = data.content;
             ws.userType = data.userType || 'client';
             clients.set(ws, { nickname: data.content, userType: ws.userType });
@@ -29,6 +36,11 @@ module.exports = (req, res) => {
               if (targetWs.readyState === WebSocket.OPEN) {
                 targetWs.send(JSON.stringify({ type: 'toggle-camera' }));
                 console.log(`Comando toggle-camera enviado para ${data.target}`);
+                wss.clients.forEach((client) => {
+                  if (client !== ws && client.readyState === WebSocket.OPEN && client.userType === 'viewer') {
+                    client.send(JSON.stringify({ type: 'camera-off', nickname: data.target }));
+                  }
+                });
               }
             }
 

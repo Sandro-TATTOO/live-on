@@ -1,73 +1,28 @@
-<!-- live-on/public/admin.html -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Admin Dashboard</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
-        body {
-            font-family: Arial, sans-serif;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
-            margin: 0;
-            background-color: #f0f0f0;
-        }
-        .container {
-            text-align: center;
-            background: white;
-            padding: 20px;
-            border-radius: 10px;
-            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
-        }
-        h1 {
-            margin-bottom: 20px;
-        }
-        button {
-            background: #007bff;
-            color: white;
-            border: none;
-            padding: 10px 20px;
-            margin: 10px;
-            border-radius: 5px;
-            cursor: pointer;
-            transition: background 0.3s ease;
-        }
-        button:hover {
-            background: #0056b3;
-        }
-        #password-input {
-            padding: 8px;
-            margin-bottom: 20px;
-            border: 1px solid #ccc;
-            border-radius: 5px;
-            width: 200px;
-        }
+        body { font-family: Arial, sans-serif; background-color: #f0f0f0; margin: 0; padding: 0; display: flex; justify-content: center; align-items: center; height: 100vh; }
+        .container { text-align: center; background: white; border-radius: 10px; padding: 40px; box-shadow: 0 0 15px rgba(0, 0, 0, 0.1); }
+        h1 { margin-bottom: 30px; color: #333; }
+        .admin-btn { background: #007bff; border: none; border-radius: 5px; color: white; padding: 15px 30px; font-size: 16px; cursor: pointer; margin: 10px; transition: background 0.3s ease, transform 0.2s ease; display: inline-flex; align-items: center; gap: 10px; }
+        .admin-btn:hover { background: #0056b3; transform: scale(1.05); }
+        .admin-btn i { font-size: 18px; }
     </style>
 </head>
 <body>
     <div class="container">
         <h1>Admin Dashboard</h1>
-        <input type="password" id="password-input" placeholder="Digite a senha de admin">
-        <br>
-        <button onclick="goToAdmin('client')">Gerenciar Clientes</button>
-        <button onclick="goToAdmin('viewer')">Gerenciar Viewers</button>
+        <button class="admin-btn" onclick="window.location.href='/admin-client.html'">
+            <i class="fas fa-users"></i> Gerenciar Clientes
+        </button>
+        <button class="admin-btn" onclick="window.location.href='/admin-viewer.html'">
+            <i class="fas fa-eye"></i> Gerenciar Viewers
+        </button>
     </div>
-
-    <script>
-        function goToAdmin(type) {
-            const password = document.getElementById('password-input').value;
-            if (!password) {
-                alert('Por favor, insira a senha de admin.');
-                return;
-            }
-            window.location.href = `/admin-${type}.html?password=${encodeURIComponent(password)}`;
-        }
-
-        // Não há WebSocket aqui, mas se fosse adicionado, seria:
-        // const ws = new WebSocket('wss://' + window.location.host + '/ws');
-    </script>
 </body>
 </html>
